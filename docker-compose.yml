@@ -1,0 +1,116 @@
+version: "3.8"
+
+services:
+  wireguard:
+    image: linuxserver/wireguard:latest
+    container_name: n-guard-wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Ho_Chi_Minh
+      - SERVERURL=${PUBLIC_IP_OR_DDNS}
+      - SERVERPORT=51820
+      - PEERS=${NUM_PEERS:-3}
+      - PEERDNS=10.13.13.1  # AdGuard IP
+      - ALLOWEDIPS=0.0.0.0/0,::/0  # Full tunnel
+      - LOG_CONFS=true
+      - INTERNAL_SUBNET=10.13.13.0
+    volumes:
+      - ./wireguard/config:/config
+      - /lib/modules:/lib/modules
+    ports:
+      - "51820:51820/udp"
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
+    networks:
+      vpn_network:
+        ipv4_address: 10.13.13.254
+
+  adguard:
+    image: adguard/adguardhome:latest
+    container_name: n-guard-adguard
+    ports:
+      - "80:80"       # Web UI
+      - "3000:3000"   # Initial setup
+      - "53:53/tcp"   # DNS
+      - "53:53/udp"   # DNS
+      - "853:853/tcp" # DNS-over-TLS
+      - "784:784/udp" # DNS-over-QUIC
+      - "8853:8853/udp" # DNS-over-QUIC (alt)
+    volumes:
+      - ./adguard/work:/opt/adguardhome/work
+      - ./adguard/conf:/opt/adguardhome/conf
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+    restart: unless-stopped
+    networks:
+      vpn_network:
+        ipv4_address: 10.13.13.1
+
+  unbound:
+    image: mvance/unbound:latest
+    container_name: n-guard-unbound
+    volumes:
+      - ./unbound/unbound.conf:/opt/unbound/etc/unbound/unbound.conf:ro
+    ports:
+      - "5335:53/tcp"
+      - "5335:53/udp"
+    restart: unless-stopped
+    networks:
+      vpn_network:
+        ipv4_address: 10.13.13.2
+
+  # Optional: HTTPS interception for YouTube ads (Phase 3)
+  # Uncomment to enable Squid proxy with SSL bumping
+  # WARNING: Requires installing CA certificate on client devices
+  # squid:
+  #   image: sameersbn/squid:latest
+  #   container_name: n-guard-squid
+  #   ports:
+  #     - "3128:3128"
+  #   volumes:
+  #     - ./squid/conf/squid.conf:/etc/squid/squid.conf
+  #     - ./squid/certs:/etc/squid/certs
+  #     - ./squid/cache:/var/spool/squid
+  #     - ./squid/logs:/var/log/squid
+  #   environment:
+  #     - TZ=Asia/Ho_Chi_Minh
+  #   restart: unless-stopped
+  #   networks:
+  #     vpn_network:
+  #       ipv4_address: 10.13.13.3
+
+  # Optional: WireGuard Web UI (wg-easy) for easier peer management
+  # Uncomment to enable visual management interface
+  # wg-easy:
+  #   image: ghcr.io/wg-easy/wg-easy:latest
+  #   container_name: n-guard-wg-easy
+  #   environment:
+  #     - WG_HOST=${PUBLIC_IP_OR_DDNS}
+  #     - PASSWORD=${WG_EASY_PASSWORD}
+  #     - WG_DEFAULT_DNS=10.13.13.1
+  #     - WG_ALLOWED_IPS=0.0.0.0/0,::/0
+  #   volumes:
+  #     - ./wireguard/wg-easy:/etc/wireguard
+  #   ports:
+  #     - "51821:51821/udp"  # WireGuard port (alternative)
+  #     - "51822:51821/tcp"  # Web UI
+  #   cap_add:
+  #     - NET_ADMIN
+  #     - SYS_MODULE
+  #   sysctls:
+  #     - net.ipv4.ip_forward=1
+  #     - net.ipv4.conf.all.src_valid_mark=1
+  #   restart: unless-stopped
+
+networks:
+  vpn_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.13.13.0/24
+          gateway: 10.13.13.254

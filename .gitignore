@@ -1,0 +1,106 @@
+# N-Guard VPN - Git Ignore File
+
+# Environment variables (contains secrets)
+.env
+
+# WireGuard keys and configs (sensitive)
+wireguard/config/*
+wireguard/wg-easy/*
+!wireguard/config/.gitkeep
+!wireguard/templates/
+
+# AdGuard Home data and configs (may contain sensitive info)
+adguard/work/*
+adguard/conf/AdGuardHome.yaml
+!adguard/work/.gitkeep
+!adguard/conf/.gitkeep
+
+# Squid proxy files
+squid/certs/*.pem
+squid/certs/*.key
+squid/cache/*
+squid/logs/*
+squid/ssl_db/*
+!squid/certs/.gitkeep
+!squid/cache/.gitkeep
+!squid/logs/.gitkeep
+
+# Unbound runtime files (if any)
+unbound/*.key
+unbound/*.pem
+
+# Logs
+*.log
+logs/*
+/var/log/*
+
+# Backups
+backups/*
+*.tar.gz
+*.zip
+*.bak
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.*.sw?
+
+# Temporary files
+tmp/*
+temp/*
+*.tmp
+
+# Docker volumes (if mounted locally)
+docker-volumes/*
+
+# Scripts output
+diag.txt
+debug_*.txt
+
+# Python cache (if any scripts use Python)
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+
+# Node modules (if any web UI)
+node_modules/
+npm-debug.log*
+
+# Compiled files
+*.o
+*.so
+*.dylib
+
+# Test files
+test_output/
+coverage/
+
+# Database files (if any)
+*.db
+*.sqlite
+*.sqlite3
+
+# Certificates (except templates)
+*.crt
+*.cert
+*.cer
+
+# SSH keys (just in case)
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Personal notes
+NOTES.md
+TODO.txt
+.personal/

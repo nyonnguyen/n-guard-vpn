@@ -1,0 +1,30 @@
+# Domains that should NOT be intercepted (certificate pinning)
+# One domain per line (regex supported)
+
+# Banking and financial services
+\.bankofamerica\.com$
+\.wellsfargo\.com$
+\.chase\.com$
+\.paypal\.com$
+\.stripe\.com$
+\.square\.com$
+
+# Social media (with pinning)
+\.facebook\.com$
+\.fbcdn\.net$
+\.instagram\.com$
+\.twitter\.com$
+\.twimg\.com$
+
+# Tech companies with strict pinning
+\.apple\.com$
+\.icloud\.com$
+\.microsoft\.com$
+\.live\.com$
+\.dropbox\.com$
+
+# Government sites
+\.gov$
+\.mil$
+
+# Add your bank or sensitive domains below:
