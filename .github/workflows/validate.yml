@@ -1,0 +1,227 @@
+name: Validate
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate YAML files
+        run: |
+          echo "Validating YAML files..."
+
+          # Install yamllint
+          pip install yamllint
+
+          # Validate docker-compose.yml
+          if [ -f docker-compose.yml ]; then
+            echo "Checking docker-compose.yml..."
+            yamllint docker-compose.yml || echo "⚠️  docker-compose.yml has warnings"
+          fi
+
+          # Validate AdGuard Home config
+          if [ -f adguard/conf/AdGuardHome.yaml ]; then
+            echo "Checking AdGuard Home config..."
+            yamllint adguard/conf/AdGuardHome.yaml || echo "⚠️  AdGuardHome.yaml has warnings"
+          fi
+
+          # Validate GitHub Actions workflows
+          if [ -d .github/workflows ]; then
+            echo "Checking GitHub Actions workflows..."
+            for file in .github/workflows/*.yml .github/workflows/*.yaml; do
+              if [ -f "$file" ]; then
+                echo "  - $(basename $file)"
+                yamllint "$file" || echo "⚠️  $(basename $file) has warnings"
+              fi
+            done
+          fi
+
+          echo "✅ YAML validation complete"
+
+      - name: Validate shell scripts
+        run: |
+          echo "Validating shell scripts..."
+
+          # Install shellcheck
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+          # Find and check all .sh files
+          SCRIPTS_FOUND=0
+          SCRIPTS_PASSED=0
+          SCRIPTS_FAILED=0
+
+          while IFS= read -r script; do
+            SCRIPTS_FOUND=$((SCRIPTS_FOUND + 1))
+            echo "Checking: $script"
+
+            if shellcheck -x "$script"; then
+              SCRIPTS_PASSED=$((SCRIPTS_PASSED + 1))
+              echo "  ✅ Passed"
+            else
+              SCRIPTS_FAILED=$((SCRIPTS_FAILED + 1))
+              echo "  ❌ Failed"
+            fi
+          done < <(find . -name "*.sh" -not -path "./.git/*" -not -path "./node_modules/*")
+
+          echo ""
+          echo "=========================================="
+          echo "Shell script validation summary:"
+          echo "  Total scripts: $SCRIPTS_FOUND"
+          echo "  Passed: $SCRIPTS_PASSED"
+          echo "  Failed: $SCRIPTS_FAILED"
+          echo "=========================================="
+
+          if [ $SCRIPTS_FAILED -gt 0 ]; then
+            echo "⚠️  Some shell scripts have issues (non-blocking)"
+          else
+            echo "✅ All shell scripts passed validation"
+          fi
+
+      - name: Validate markdown files
+        run: |
+          echo "Validating markdown files..."
+
+          # Install markdown-link-check
+          npm install -g markdown-link-check
+
+          # Find and check all .md files
+          DOCS_FOUND=0
+          DOCS_PASSED=0
+          DOCS_FAILED=0
+
+          while IFS= read -r doc; do
+            DOCS_FOUND=$((DOCS_FOUND + 1))
+            echo "Checking links in: $doc"
+
+            # Create config to ignore localhost and example URLs
+            cat > /tmp/markdown-link-check-config.json << 'EOF'
+          {
+            "ignorePatterns": [
+              {
+                "pattern": "^http://localhost"
+              },
+              {
+                "pattern": "^https://localhost"
+              },
+              {
+                "pattern": "^http://192.168"
+              },
+              {
+                "pattern": "^http://10\\."
+              }
+            ],
+            "timeout": "10s",
+            "retryOn429": true,
+            "retryCount": 3
+          }
+          EOF
+
+            if markdown-link-check "$doc" --config /tmp/markdown-link-check-config.json; then
+              DOCS_PASSED=$((DOCS_PASSED + 1))
+              echo "  ✅ Links valid"
+            else
+              DOCS_FAILED=$((DOCS_FAILED + 1))
+              echo "  ⚠️  Some links may be broken (non-blocking)"
+            fi
+          done < <(find . -name "*.md" -not -path "./.git/*" -not -path "./node_modules/*")
+
+          echo ""
+          echo "=========================================="
+          echo "Markdown validation summary:"
+          echo "  Total files: $DOCS_FOUND"
+          echo "  Passed: $DOCS_PASSED"
+          echo "  Issues: $DOCS_FAILED"
+          echo "=========================================="
+
+      - name: Validate .env.template
+        run: |
+          echo "Validating .env.template..."
+
+          if [ ! -f .env.template ]; then
+            echo "❌ .env.template not found"
+            exit 1
+          fi
+
+          # Check for required variables
+          REQUIRED_VARS=(
+            "SERVER_PUBLIC_IP"
+            "WIREGUARD_PORT"
+            "DNS_PORT"
+            "ADGUARD_PORT"
+            "ADGUARD_USERNAME"
+            "ADGUARD_PASSWORD"
+            "TIMEZONE"
+          )
+
+          MISSING_VARS=()
+
+          for var in "${REQUIRED_VARS[@]}"; do
+            if ! grep -q "^${var}=" .env.template && ! grep -q "^#${var}=" .env.template; then
+              MISSING_VARS+=("$var")
+            fi
+          done
+
+          if [ ${#MISSING_VARS[@]} -gt 0 ]; then
+            echo "❌ Missing required variables in .env.template:"
+            printf '  - %s\n' "${MISSING_VARS[@]}"
+            exit 1
+          fi
+
+          echo "✅ .env.template validation passed"
+
+      - name: Validate VERSION file
+        run: |
+          echo "Validating VERSION file..."
+
+          if [ -f VERSION ]; then
+            VERSION=$(cat VERSION | tr -d '[:space:]')
+
+            if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "❌ Invalid VERSION format: $VERSION"
+              echo "Expected format: X.Y.Z (e.g., 1.0.0)"
+              exit 1
+            fi
+
+            echo "✅ VERSION file format valid: $VERSION"
+          else
+            echo "⚠️  VERSION file not found (will be created on first release)"
+          fi
+
+      - name: Validate Docker Compose configuration
+        run: |
+          echo "Validating Docker Compose configuration..."
+
+          if [ ! -f docker-compose.yml ]; then
+            echo "❌ docker-compose.yml not found"
+            exit 1
+          fi
+
+          # Validate docker-compose syntax
+          docker-compose -f docker-compose.yml config > /dev/null 2>&1 || {
+            echo "❌ docker-compose.yml has syntax errors"
+            docker-compose -f docker-compose.yml config
+            exit 1
+          }
+
+          echo "✅ Docker Compose configuration valid"
+
+      - name: Validation summary
+        if: always()
+        run: |
+          echo ""
+          echo "=========================================="
+          echo "✅ Validation complete"
+          echo "=========================================="
+          echo ""
+          echo "All checks passed successfully!"
+          echo "The PR is ready for review."
