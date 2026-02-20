@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      padding-bottom: 70px; /* Space for fixed footer */
+    }
+    .tab-active {
+      border-bottom: 2px solid #3b82f6;
+      color: #3b82f6;
+      font-weight: 600;
+    }
+    .peer-tab:hover {
+      background-color: #f3f4f6;
+    }
+    .qr-code {
+      image-rendering: pixelated;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <%- include('partials/header') %>
+
+  <div class="container mx-auto px-4 py-8 max-w-5xl">
+    <!-- Header Section -->
+    <div class="bg-gradient-to-r from-green-600 to-green-800 text-white rounded-lg shadow-xl p-8 mb-8">
+      <h1 class="text-4xl font-bold mb-3">VPN Setup</h1>
+      <p class="text-xl text-green-100">Configure your devices to connect to the VPN</p>
+    </div>
+
+    <!-- Authentication Section -->
+    <div id="authSection" class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-2xl font-semibold mb-4 flex items-center">
+        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+        </svg>
+        Authentication Required
+      </h2>
+      <p class="text-gray-600 mb-4">Enter the VPN access password to view and download configurations.</p>
+      <div class="flex flex-wrap gap-3">
+        <input type="password" id="vpnPassword" placeholder="Enter password"
+               class="flex-1 min-w-[200px] px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent">
+        <button onclick="vpnLogin()" id="loginBtn"
+                class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors">
+          Unlock
+        </button>
+      </div>
+      <div id="authError" class="mt-3 text-red-600 hidden"></div>
+      <p class="mt-3 text-sm text-gray-500">Default password: <code class="bg-gray-100 px-2 py-1 rounded">nguard-vpn-access</code></p>
+    </div>
+
+    <!-- Server Status Section -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-2xl font-semibold mb-4 flex items-center">
+        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+        </svg>
+        Server Status
+      </h2>
+      <div id="serverStatus" class="space-y-2">
+        <div class="flex justify-between items-center py-2 border-b">
+          <span class="font-medium text-gray-700">Status:</span>
+          <span id="vpnStatusBadge" class="px-3 py-1 rounded-full text-sm font-semibold bg-gray-200">Loading...</span>
+        </div>
+        <div class="flex justify-between items-center py-2 border-b">
+          <span class="font-medium text-gray-700">Public Endpoint:</span>
+          <span id="serverEndpoint" class="font-mono text-blue-600">-</span>
+        </div>
+        <div class="flex justify-between items-center py-2">
+          <span class="font-medium text-gray-700">Connected Peers:</span>
+          <span id="connectedPeers" class="font-semibold">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Peer Configurations Section -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-semibold flex items-center">
+          <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+          </svg>
+          VPN Configurations
+        </h2>
+        <button onclick="createPeer()" id="addPeerBtn"
+                class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors hidden">
+          + Add Peer
+        </button>
+      </div>
+
+      <!-- Peer Tabs -->
+      <div class="border-b mb-4">
+        <div id="peerTabs" class="flex flex-wrap gap-1">
+          <!-- Tabs will be inserted here -->
+        </div>
+      </div>
+
+      <!-- Peer Details -->
+      <div id="peerDetails" class="hidden">
+        <div class="grid md:grid-cols-2 gap-6">
+          <!-- QR Code -->
+          <div class="text-center">
+            <div id="qrContainer" class="bg-gray-100 rounded-lg p-4 mb-4">
+              <div id="qrPlaceholder" class="w-48 h-48 mx-auto bg-gray-200 rounded flex items-center justify-center">
+                <span class="text-gray-500">Login to view QR</span>
+              </div>
+              <img id="qrCode" src="" alt="QR Code" class="qr-code w-48 h-48 mx-auto hidden">
+            </div>
+            <p class="text-sm text-gray-600">Scan with WireGuard app</p>
+          </div>
+
+          <!-- Config Details -->
+          <div>
+            <h3 class="font-semibold text-lg mb-3">Configuration Details</h3>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between py-1 border-b">
+                <span class="text-gray-600">Name:</span>
+                <span id="peerName" class="font-mono">-</span>
+              </div>
+              <div class="flex justify-between py-1 border-b">
+                <span class="text-gray-600">IP Address:</span>
+                <span id="peerAddress" class="font-mono">-</span>
+              </div>
+              <div class="flex justify-between py-1 border-b">
+                <span class="text-gray-600">DNS Server:</span>
+                <span id="peerDNS" class="font-mono">-</span>
+              </div>
+              <div class="flex justify-between py-1">
+                <span class="text-gray-600">Endpoint:</span>
+                <span id="peerEndpoint" class="font-mono">-</span>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="mt-6 flex flex-wrap gap-3">
+              <button onclick="downloadConfig()" id="downloadBtn"
+                      class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                Download .conf
+              </button>
+              <button onclick="copyConfig()" id="copyBtn"
+                      class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                Copy Config
+              </button>
+              <button onclick="deletePeer()" id="deleteBtn"
+                      class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors hidden">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- No Peers Message -->
+      <div id="noPeersMessage" class="text-center py-8 text-gray-500 hidden">
+        <p>No VPN configurations found.</p>
+        <p class="text-sm mt-2">Click "Add Peer" to create a new configuration.</p>
+      </div>
+
+      <!-- Loading State -->
+      <div id="peersLoading" class="text-center py-8">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+        <p class="mt-2 text-gray-500">Loading configurations...</p>
+      </div>
+    </div>
+
+    <!-- Setup Instructions Section -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-2xl font-semibold mb-4 flex items-center">
+        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        </svg>
+        Setup Instructions
+      </h2>
+
+      <!-- Platform Tabs -->
+      <div class="flex flex-wrap gap-2 mb-4 border-b pb-4">
+        <button onclick="showInstructions('ios')" class="instruction-tab px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors" data-platform="ios">
+          iOS
+        </button>
+        <button onclick="showInstructions('android')" class="instruction-tab px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors" data-platform="android">
+          Android
+        </button>
+        <button onclick="showInstructions('windows')" class="instruction-tab px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors" data-platform="windows">
+          Windows
+        </button>
+        <button onclick="showInstructions('macos')" class="instruction-tab px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors" data-platform="macos">
+          macOS
+        </button>
+        <button onclick="showInstructions('linux')" class="instruction-tab px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors" data-platform="linux">
+          Linux
+        </button>
+      </div>
+
+      <!-- Instructions Content -->
+      <div id="instructionsContent">
+        <!-- iOS Instructions -->
+        <div id="instructions-ios" class="instruction-panel hidden">
+          <h3 class="font-semibold text-lg mb-3">iOS Setup</h3>
+          <ol class="list-decimal list-inside space-y-2 text-gray-700">
+            <li>Install <a href="https://apps.apple.com/app/wireguard/id1441195209" target="_blank" class="text-blue-600 hover:underline">WireGuard</a> from the App Store</li>
+            <li>Open the WireGuard app</li>
+            <li>Tap the <strong>+</strong> button</li>
+            <li>Select <strong>"Create from QR code"</strong></li>
+            <li>Point your camera at the QR code above</li>
+            <li>Name your tunnel (e.g., "N-Guard VPN")</li>
+            <li>Tap <strong>"Allow"</strong> when prompted to add VPN configuration</li>
+            <li>Toggle the switch to connect</li>
+          </ol>
+        </div>
+
+        <!-- Android Instructions -->
+        <div id="instructions-android" class="instruction-panel hidden">
+          <h3 class="font-semibold text-lg mb-3">Android Setup</h3>
+          <ol class="list-decimal list-inside space-y-2 text-gray-700">
+            <li>Install <a href="https://play.google.com/store/apps/details?id=com.wireguard.android" target="_blank" class="text-blue-600 hover:underline">WireGuard</a> from Google Play</li>
+            <li>Open the WireGuard app</li>
+            <li>Tap the <strong>+</strong> button</li>
+            <li>Select <strong>"Scan from QR code"</strong></li>
+            <li>Scan the QR code displayed above</li>
+            <li>Name your tunnel (e.g., "N-Guard VPN")</li>
+            <li>Tap the toggle to connect</li>
+          </ol>
+        </div>
+
+        <!-- Windows Instructions -->
+        <div id="instructions-windows" class="instruction-panel hidden">
+          <h3 class="font-semibold text-lg mb-3">Windows Setup</h3>
+          <ol class="list-decimal list-inside space-y-2 text-gray-700">
+            <li>Download and install <a href="https://www.wireguard.com/install/" target="_blank" class="text-blue-600 hover:underline">WireGuard for Windows</a></li>
+            <li>Click <strong>"Download .conf"</strong> button above</li>
+            <li>Open WireGuard application</li>
+            <li>Click <strong>"Import tunnel(s) from file"</strong></li>
+            <li>Select the downloaded <code>.conf</code> file</li>
+            <li>Click <strong>"Activate"</strong> to connect</li>
+          </ol>
+        </div>
+
+        <!-- macOS Instructions -->
+        <div id="instructions-macos" class="instruction-panel hidden">
+          <h3 class="font-semibold text-lg mb-3">macOS Setup</h3>
+          <ol class="list-decimal list-inside space-y-2 text-gray-700">
+            <li>Install <a href="https://apps.apple.com/app/wireguard/id1451685025" target="_blank" class="text-blue-600 hover:underline">WireGuard</a> from the App Store</li>
+            <li>Click <strong>"Download .conf"</strong> button above</li>
+            <li>Open WireGuard from the menu bar</li>
+            <li>Select <strong>"Import tunnel(s) from file"</strong></li>
+            <li>Choose the downloaded <code>.conf</code> file</li>
+            <li>Click <strong>"Allow"</strong> when prompted</li>
+            <li>Toggle the connection on</li>
+          </ol>
+        </div>
+
+        <!-- Linux Instructions -->
+        <div id="instructions-linux" class="instruction-panel hidden">
+          <h3 class="font-semibold text-lg mb-3">Linux Setup</h3>
+          <ol class="list-decimal list-inside space-y-2 text-gray-700">
+            <li>Install WireGuard:
+              <pre class="bg-gray-100 p-2 rounded mt-1 text-sm overflow-x-auto">sudo apt install wireguard</pre>
+            </li>
+            <li>Click <strong>"Download .conf"</strong> button above</li>
+            <li>Move the config file:
+              <pre class="bg-gray-100 p-2 rounded mt-1 text-sm overflow-x-auto">sudo mv ~/Downloads/peer*.conf /etc/wireguard/wg0.conf</pre>
+            </li>
+            <li>Set permissions:
+              <pre class="bg-gray-100 p-2 rounded mt-1 text-sm overflow-x-auto">sudo chmod 600 /etc/wireguard/wg0.conf</pre>
+            </li>
+            <li>Connect:
+              <pre class="bg-gray-100 p-2 rounded mt-1 text-sm overflow-x-auto">sudo wg-quick up wg0</pre>
+            </li>
+            <li>To disconnect:
+              <pre class="bg-gray-100 p-2 rounded mt-1 text-sm overflow-x-auto">sudo wg-quick down wg0</pre>
+            </li>
+          </ol>
+        </div>
+
+        <!-- Default: Select Platform -->
+        <div id="instructions-default" class="text-center py-8 text-gray-500">
+          <p>Select your device platform above to see setup instructions.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <%- include('partials/footer') %>
+
+  <script src="/static/js/vpn-setup.js"></script>
+</body>
+</html>
