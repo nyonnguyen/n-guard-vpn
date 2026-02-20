@@ -1,0 +1,217 @@
+name: Version Bump
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  bump-version:
+    # Only run if PR was merged (not just closed)
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Detect version bump type
+        id: detect-bump
+        run: |
+          # Get branch name from PR
+          BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+
+          echo "Branch name: $BRANCH_NAME"
+          echo "PR title: $PR_TITLE"
+
+          # Initialize bump type
+          BUMP_TYPE="patch"
+
+          # Check branch name patterns
+          if [[ "$BRANCH_NAME" =~ (nyon/|^)breaking- ]] || [[ "$BRANCH_NAME" =~ (nyon/|^)major- ]]; then
+            BUMP_TYPE="major"
+          elif [[ "$BRANCH_NAME" =~ (nyon/|^)feature- ]] || [[ "$BRANCH_NAME" =~ (nyon/|^)feat- ]]; then
+            BUMP_TYPE="minor"
+          elif [[ "$BRANCH_NAME" =~ (nyon/|^)fix- ]] || [[ "$BRANCH_NAME" =~ (nyon/|^)bugfix- ]]; then
+            BUMP_TYPE="patch"
+          else
+            # Fallback to PR title patterns
+            if [[ "$PR_TITLE" =~ ^(BREAKING:|major:) ]]; then
+              BUMP_TYPE="major"
+            elif [[ "$PR_TITLE" =~ ^(feat:|feature:) ]]; then
+              BUMP_TYPE="minor"
+            elif [[ "$PR_TITLE" =~ ^(fix:|bugfix:) ]]; then
+              BUMP_TYPE="patch"
+            fi
+          fi
+
+          # Skip version bump if PR title contains [skip ci] or [docs]
+          if [[ "$PR_TITLE" =~ \[skip\ ci\] ]]; then
+            echo "Skipping version bump (found [skip ci])"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Detected bump type: $BUMP_TYPE"
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+          echo "skip=false" >> $GITHUB_OUTPUT
+
+      - name: Read current version
+        if: steps.detect-bump.outputs.skip != 'true'
+        id: current-version
+        run: |
+          if [ ! -f VERSION ]; then
+            echo "VERSION file not found, creating with 1.0.0"
+            echo "1.0.0" > VERSION
+            CURRENT_VERSION="1.0.0"
+          else
+            CURRENT_VERSION=$(cat VERSION | tr -d '[:space:]')
+          fi
+
+          echo "Current version: $CURRENT_VERSION"
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Calculate new version
+        if: steps.detect-bump.outputs.skip != 'true'
+        id: new-version
+        run: |
+          CURRENT_VERSION="${{ steps.current-version.outputs.version }}"
+          BUMP_TYPE="${{ steps.detect-bump.outputs.bump_type }}"
+
+          # Parse version
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+          # Calculate new version based on bump type
+          case "$BUMP_TYPE" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if tag already exists
+        if: steps.detect-bump.outputs.skip != 'true'
+        id: check-tag
+        run: |
+          NEW_VERSION="${{ steps.new-version.outputs.version }}"
+          if git rev-parse "v$NEW_VERSION" >/dev/null 2>&1; then
+            echo "Tag v$NEW_VERSION already exists, skipping version bump"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update VERSION file
+        if: steps.detect-bump.outputs.skip != 'true' && steps.check-tag.outputs.exists != 'true'
+        run: |
+          NEW_VERSION="${{ steps.new-version.outputs.version }}"
+          echo "$NEW_VERSION" > VERSION
+          echo "Updated VERSION file to $NEW_VERSION"
+
+      - name: Update CHANGELOG.md
+        if: steps.detect-bump.outputs.skip != 'true' && steps.check-tag.outputs.exists != 'true'
+        run: |
+          NEW_VERSION="${{ steps.new-version.outputs.version }}"
+          CURRENT_DATE=$(date +%Y-%m-%d)
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+
+          # Create new changelog entry
+          cat > /tmp/new_entry.md << EOF
+          ## [$NEW_VERSION] - $CURRENT_DATE
+
+          ### Changed
+          - $PR_TITLE (#$PR_NUMBER)
+
+          EOF
+
+          # Check if CHANGELOG.md exists
+          if [ ! -f CHANGELOG.md ]; then
+            echo "CHANGELOG.md not found, creating new one"
+            cat > CHANGELOG.md << EOF
+          # Changelog
+
+          All notable changes to N-Guard VPN will be documented in this file.
+
+          The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+          and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+          EOF
+          fi
+
+          # Insert new entry after header
+          if grep -q "^## \[" CHANGELOG.md; then
+            # Insert before first version entry
+            awk '/^## \[/{if(!found){print ""; system("cat /tmp/new_entry.md"); found=1}} 1' CHANGELOG.md > /tmp/changelog_new.md
+            mv /tmp/changelog_new.md CHANGELOG.md
+          else
+            # Append after header
+            echo "" >> CHANGELOG.md
+            cat /tmp/new_entry.md >> CHANGELOG.md
+          fi
+
+          # Add version link at the end
+          PREV_VERSION="${{ steps.current-version.outputs.version }}"
+          echo "[$NEW_VERSION]: https://github.com/nyonnguyen/n-guard-vpn/compare/v${PREV_VERSION}...v${NEW_VERSION}" >> CHANGELOG.md
+
+          echo "Updated CHANGELOG.md with version $NEW_VERSION"
+
+      - name: Commit version bump
+        if: steps.detect-bump.outputs.skip != 'true' && steps.check-tag.outputs.exists != 'true'
+        run: |
+          NEW_VERSION="${{ steps.new-version.outputs.version }}"
+
+          git add VERSION CHANGELOG.md
+          git commit -m "chore: bump version to v$NEW_VERSION
+
+          Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
+
+          echo "Created version bump commit"
+
+      - name: Create git tag
+        if: steps.detect-bump.outputs.skip != 'true' && steps.check-tag.outputs.exists != 'true'
+        run: |
+          NEW_VERSION="${{ steps.new-version.outputs.version }}"
+          git tag -a "v$NEW_VERSION" -m "Release version $NEW_VERSION"
+          echo "Created tag v$NEW_VERSION"
+
+      - name: Push changes
+        if: steps.detect-bump.outputs.skip != 'true' && steps.check-tag.outputs.exists != 'true'
+        run: |
+          git push origin main
+          git push origin --tags
+          echo "Pushed version bump and tag to repository"
+
+      - name: Summary
+        if: steps.detect-bump.outputs.skip != 'true' && steps.check-tag.outputs.exists != 'true'
+        run: |
+          NEW_VERSION="${{ steps.new-version.outputs.version }}"
+          BUMP_TYPE="${{ steps.detect-bump.outputs.bump_type }}"
+          echo "✅ Version bumped from ${{ steps.current-version.outputs.version }} to $NEW_VERSION ($BUMP_TYPE)"
+          echo "🏷️  Created tag: v$NEW_VERSION"
+          echo "📦 Release workflow will be triggered automatically"

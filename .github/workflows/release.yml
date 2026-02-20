@@ -1,0 +1,271 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g., v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  discussions: write
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.tag }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          VERSION_NUMBER=${VERSION#v}
+          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION_NUMBER" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Create release directory
+        run: |
+          mkdir -p release-artifacts
+          echo "Created release-artifacts directory"
+
+      - name: Build configuration bundle
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          BUNDLE_NAME="n-guard-vpn-configs-v${VERSION}"
+
+          echo "Building configuration bundle: ${BUNDLE_NAME}.tar.gz"
+
+          # Create temporary directory for configs
+          mkdir -p /tmp/${BUNDLE_NAME}
+
+          # Copy configuration files
+          cp docker-compose.yml /tmp/${BUNDLE_NAME}/
+          cp .env.template /tmp/${BUNDLE_NAME}/
+
+          # Copy service configs
+          mkdir -p /tmp/${BUNDLE_NAME}/adguard/conf
+          cp -r adguard/conf/* /tmp/${BUNDLE_NAME}/adguard/conf/ 2>/dev/null || true
+
+          mkdir -p /tmp/${BUNDLE_NAME}/unbound
+          cp unbound/unbound.conf /tmp/${BUNDLE_NAME}/unbound/
+
+          mkdir -p /tmp/${BUNDLE_NAME}/squid/conf
+          cp -r squid/conf/* /tmp/${BUNDLE_NAME}/squid/conf/ 2>/dev/null || true
+
+          mkdir -p /tmp/${BUNDLE_NAME}/firewall
+          cp firewall/iptables-rules.sh /tmp/${BUNDLE_NAME}/firewall/
+
+          # Copy scripts
+          mkdir -p /tmp/${BUNDLE_NAME}/scripts
+          cp scripts/*.sh /tmp/${BUNDLE_NAME}/scripts/
+
+          # Create tarball
+          cd /tmp
+          tar -czf ${BUNDLE_NAME}.tar.gz ${BUNDLE_NAME}
+          mv ${BUNDLE_NAME}.tar.gz ${GITHUB_WORKSPACE}/release-artifacts/
+
+          echo "✅ Configuration bundle created"
+
+      - name: Build documentation bundle
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          BUNDLE_NAME="n-guard-vpn-docs-v${VERSION}"
+
+          echo "Building documentation bundle: ${BUNDLE_NAME}.tar.gz"
+
+          # Create temporary directory for docs
+          mkdir -p /tmp/${BUNDLE_NAME}
+
+          # Copy documentation files
+          cp -r docs/* /tmp/${BUNDLE_NAME}/
+          cp README.md /tmp/${BUNDLE_NAME}/
+          cp pi-adblock-req.md /tmp/${BUNDLE_NAME}/
+          cp CHANGELOG.md /tmp/${BUNDLE_NAME}/ 2>/dev/null || true
+          cp VERSION /tmp/${BUNDLE_NAME}/ 2>/dev/null || true
+
+          # Create tarball
+          cd /tmp
+          tar -czf ${BUNDLE_NAME}.tar.gz ${BUNDLE_NAME}
+          mv ${BUNDLE_NAME}.tar.gz ${GITHUB_WORKSPACE}/release-artifacts/
+
+          echo "✅ Documentation bundle created"
+
+      - name: Build complete package
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          BUNDLE_NAME="n-guard-vpn-v${VERSION}"
+
+          echo "Building complete package: ${BUNDLE_NAME}.tar.gz"
+
+          # Create temporary directory
+          mkdir -p /tmp/${BUNDLE_NAME}
+
+          # Copy everything except .git and ignored files
+          rsync -av \
+            --exclude='.git' \
+            --exclude='adguard/work/*' \
+            --exclude='wireguard/config/*' \
+            --exclude='squid/cache/*' \
+            --exclude='squid/logs/*' \
+            --exclude='*.log' \
+            --exclude='.env' \
+            --exclude='release-artifacts' \
+            ./ /tmp/${BUNDLE_NAME}/
+
+          # Create tarball
+          cd /tmp
+          tar -czf ${BUNDLE_NAME}.tar.gz ${BUNDLE_NAME}
+          mv ${BUNDLE_NAME}.tar.gz ${GITHUB_WORKSPACE}/release-artifacts/
+
+          echo "✅ Complete package created"
+
+      - name: Generate checksums
+        run: |
+          cd release-artifacts
+          sha256sum *.tar.gz > checksums.txt
+          echo "✅ Checksums generated"
+          echo ""
+          echo "Checksums:"
+          cat checksums.txt
+
+      - name: Extract release notes from CHANGELOG
+        id: release-notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          if [ ! -f CHANGELOG.md ]; then
+            echo "CHANGELOG.md not found, creating default release notes"
+            cat > /tmp/release_notes.md << EOF
+          # N-Guard VPN v${VERSION}
+
+          See the full changelog at [CHANGELOG.md](https://github.com/nyonnguyen/n-guard-vpn/blob/main/CHANGELOG.md)
+          EOF
+          else
+            # Extract changes for current version from CHANGELOG
+            awk -v version="${VERSION}" '
+              /^## \['"${VERSION}"'\]/ { found=1; next }
+              found && /^## \[/ { exit }
+              found { print }
+            ' CHANGELOG.md > /tmp/changelog_excerpt.md
+
+            # Create release notes with installation instructions
+            cat > /tmp/release_notes.md << 'EOF'
+          ## Installation
+
+          ### New Installation
+
+          Download the complete package and follow the installation guide:
+
+          ```bash
+          wget https://github.com/nyonnguyen/n-guard-vpn/releases/download/${{ steps.version.outputs.tag }}/n-guard-vpn-v${{ steps.version.outputs.version }}.tar.gz
+          tar -xzf n-guard-vpn-v${{ steps.version.outputs.version }}.tar.gz
+          cd n-guard-vpn-${{ steps.version.outputs.version }}
+          ./scripts/setup.sh
+          ```
+
+          See [INSTALL.md](https://github.com/nyonnguyen/n-guard-vpn/blob/main/docs/INSTALL.md) for detailed instructions.
+
+          ### Upgrade from Previous Version
+
+          1. Backup your configuration:
+             ```bash
+             ./scripts/backup.sh
+             ```
+
+          2. Download configuration bundle:
+             ```bash
+             wget https://github.com/nyonnguyen/n-guard-vpn/releases/download/${{ steps.version.outputs.tag }}/n-guard-vpn-configs-v${{ steps.version.outputs.version }}.tar.gz
+             ```
+
+          3. Review changes and update as needed
+
+          4. Restart services:
+             ```bash
+             docker-compose pull
+             docker-compose up -d
+             ```
+
+          ## What's Changed
+
+          EOF
+
+            # Append changelog excerpt
+            cat /tmp/changelog_excerpt.md >> /tmp/release_notes.md
+
+            # Add verification instructions
+            cat >> /tmp/release_notes.md << 'EOF'
+
+          ## Verification
+
+          Verify downloaded files using SHA256 checksums:
+
+          ```bash
+          sha256sum -c checksums.txt
+          ```
+
+          ## Artifacts
+
+          - **n-guard-vpn-v${{ steps.version.outputs.version }}.tar.gz** - Complete source code
+          - **n-guard-vpn-configs-v${{ steps.version.outputs.version }}.tar.gz** - Configuration files only
+          - **n-guard-vpn-docs-v${{ steps.version.outputs.version }}.tar.gz** - Documentation bundle
+          - **checksums.txt** - SHA256 checksums for verification
+
+          ---
+
+          Built with [Claude Code](https://claude.com/claude-code)
+          EOF
+          fi
+
+          echo "✅ Release notes generated"
+
+      - name: Determine if pre-release
+        id: prerelease
+        run: |
+          VERSION="${{ steps.version.outputs.tag }}"
+          if [[ "$VERSION" =~ -(alpha|beta|rc) ]]; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+            echo "This is a pre-release"
+          else
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+            echo "This is a stable release"
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: N-Guard VPN ${{ steps.version.outputs.tag }}
+          body_path: /tmp/release_notes.md
+          draft: false
+          prerelease: ${{ steps.prerelease.outputs.prerelease }}
+          files: |
+            release-artifacts/*.tar.gz
+            release-artifacts/checksums.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release summary
+        run: |
+          VERSION="${{ steps.version.outputs.tag }}"
+          echo "=========================================="
+          echo "✅ Release $VERSION published successfully"
+          echo "=========================================="
+          echo ""
+          echo "Artifacts:"
+          ls -lh release-artifacts/
+          echo ""
+          echo "🎉 Release available at: https://github.com/nyonnguyen/n-guard-vpn/releases/tag/$VERSION"
