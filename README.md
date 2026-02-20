@@ -1,10 +1,5 @@
 # N-Guard VPN 🛡️
 
-![Version](https://img.shields.io/github/v/release/nyonnguyen/n-guard-vpn?label=version)
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%20%7C%20Linux-green.svg)
-![Docker](https://img.shields.io/badge/docker-required-blue.svg)
-
 **Complete Ad-Blocking VPN Solution for Raspberry Pi & miniPC**
 
 Transform your Raspberry Pi or miniPC into a powerful network-wide ad blocker and VPN server. Block ads on all devices (iPhone, Android, laptops) with DNS-level filtering, automatic blocklist updates, and complete privacy protection.
@@ -63,7 +58,7 @@ Transform your Raspberry Pi or miniPC into a powerful network-wide ad blocker an
 ```bash
 # Clone repository
 cd /opt
-sudo git clone https://github.com/nyonnguyen/n-guard-vpn.git
+sudo git clone https://github.com/yourusername/n-guard-vpn.git
 cd n-guard-vpn
 
 # Run automated setup
@@ -142,7 +137,7 @@ After installation:
 
 ```bash
 cd /opt
-sudo git clone https://github.com/nyonnguyen/n-guard-vpn.git
+sudo git clone https://github.com/yourusername/n-guard-vpn.git
 cd n-guard-vpn
 sudo ./scripts/setup.sh
 ```
@@ -215,6 +210,40 @@ docker-compose pull && docker-compose up -d
 docker-compose down
 ```
 
+### Web Management Interface
+
+N-Guard VPN includes a built-in web management interface for easy system administration and updates.
+
+**Access:** `http://<your-pi-ip>:8080`
+
+**Features:**
+- 🔍 **Version Checking** - Check for updates from GitHub with one click
+- 🔄 **One-Click Updates** - Install updates automatically with backup & rollback
+- 📊 **System Status** - View real-time status of all containers
+- 📦 **Backup Management** - View and manage system backups
+- ℹ️ **About & Information** - Project information, author, and support links
+
+**Quick Actions:**
+```bash
+# Check update manager status
+docker logs n-guard-manager
+
+# Access update manager
+curl http://localhost:8080/api/health
+
+# Check current version
+cat VERSION
+```
+
+**Update Process:**
+1. Open web interface at `http://<server-ip>:8080`
+2. Navigate to the "Update" page or click "Check for Updates" on About page
+3. Review release notes and click "Install Update"
+4. Wait for automatic backup, download, installation, and verification
+5. System automatically rolls back if update fails
+
+**See:** [UPDATE-MANAGEMENT.md](docs/UPDATE-MANAGEMENT.md) for detailed documentation
+
 ### Maintenance
 
 **Automated (via cron):**
@@ -242,8 +271,6 @@ docker-compose down
 - **[Client Setup](docs/CLIENT-SETUP.md)** - Configure devices (iOS, Android, desktop)
 - **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues & solutions
 - **[MITM Setup](docs/MITM-SETUP.md)** - Optional YouTube ad blocking (advanced)
-- **[Version Workflow](docs/VERSION-WORKFLOW.md)** - Version management & releases
-- **[Changelog](CHANGELOG.md)** - Release history & changes
 - **[Complete Plan](/.claude/plans/shiny-bouncing-meerkat.md)** - Full project plan & architecture
 
 ---
@@ -401,47 +428,6 @@ Contributions welcome! Please:
 - Check [Troubleshooting Guide](docs/TROUBLESHOOTING.md) first
 - Search existing issues
 - Provide logs and system info
-
----
-
-## 📌 Versioning
-
-N-Guard VPN follows [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`
-
-- **MAJOR**: Breaking changes requiring manual migration
-- **MINOR**: New features (backward compatible)
-- **PATCH**: Bug fixes and improvements
-
-### Releases
-
-- All releases are published on [GitHub Releases](https://github.com/nyonnguyen/n-guard-vpn/releases)
-- Each release includes:
-  - Full source code archive
-  - Configuration files bundle
-  - Documentation bundle
-  - SHA256 checksums for verification
-
-### Upgrading
-
-To upgrade to a new version:
-
-```bash
-# 1. Backup your configuration
-./scripts/backup.sh
-
-# 2. Download new version
-wget https://github.com/nyonnguyen/n-guard-vpn/releases/download/vX.Y.Z/n-guard-vpn-configs-vX.Y.Z.tar.gz
-tar -xzf n-guard-vpn-configs-vX.Y.Z.tar.gz
-
-# 3. Review changes
-cat CHANGELOG.md
-
-# 4. Apply updates and restart
-docker-compose pull
-docker-compose up -d
-```
-
-For detailed version management information, see [Version Workflow](docs/VERSION-WORKFLOW.md).
 
 ---
 

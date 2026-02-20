@@ -1,0 +1,37 @@
+<footer class="fixed bottom-0 w-full bg-gray-800 text-white text-sm py-3 px-4 shadow-lg border-t border-gray-700">
+  <div class="container mx-auto flex justify-between items-center">
+    <div class="flex items-center space-x-2">
+      <span class="font-medium">N-Guard VPN</span>
+      <span class="text-gray-400">|</span>
+      <span class="text-gray-300">v<span id="footerVersion"><%= version || '0.0.0' %></span></span>
+      <span id="updateBadge" class="hidden ml-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full animate-pulse">
+        Update Available
+      </span>
+    </div>
+    <div class="flex space-x-4">
+      <a href="/about" class="text-blue-400 hover:text-blue-300 transition-colors">About</a>
+      <a href="https://github.com/<%= repo || 'nyonnguyen/n-guard-vpn' %>" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors">GitHub</a>
+      <a href="https://github.com/<%= repo || 'nyonnguyen/n-guard-vpn' %>/issues" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors">Support</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Check for updates on page load (non-blocking)
+  (async function checkForUpdates() {
+    try {
+      const response = await fetch('/api/version/check');
+      const data = await response.json();
+
+      if (data.update_available) {
+        const badge = document.getElementById('updateBadge');
+        if (badge) {
+          badge.classList.remove('hidden');
+          badge.title = `Version ${data.latest_version} available`;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to check for updates:', error);
+    }
+  })();
+</script>

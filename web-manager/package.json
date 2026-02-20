@@ -1,0 +1,25 @@
+{
+  "name": "n-guard-manager",
+  "version": "1.0.0",
+  "description": "N-Guard VPN Update Manager",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "NODE_ENV=development node server.js"
+  },
+  "keywords": ["vpn", "update-manager", "raspberry-pi"],
+  "author": "Nyon Nguyen <nyon@example.com>",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "ejs": "^3.1.9",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.1.5",
+    "compression": "^1.7.4",
+    "winston": "^3.11.0",
+    "dockerode": "^4.0.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

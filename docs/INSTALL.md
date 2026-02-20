@@ -429,3 +429,71 @@ sudo netfilter-persistent save
 ---
 
 **Installation complete!** Proceed to [CLIENT-SETUP.md](CLIENT-SETUP.md) to configure your devices.
+
+---
+
+## Web Manager Setup
+
+N-Guard VPN includes a web-based management interface for checking updates, monitoring system status, and managing backups.
+
+### Starting the Web Manager
+
+```bash
+cd /opt/n-guard-vpn
+
+# Build the web manager container
+docker compose build web-manager
+
+# Start the web manager
+docker compose up -d web-manager
+
+# Or start it directly
+docker start n-guard-manager
+```
+
+### Accessing the Web Interface
+
+Open your browser and navigate to:
+```
+http://<your-server-ip>:8080
+```
+
+### Features
+
+- **About Page** (`/about`) - Project information and quick update check
+- **Update Page** (`/update`) - Check for updates and install new versions
+- **Status Page** (`/status`) - View container health and system status
+
+### API Endpoints
+
+```bash
+# Health check
+curl http://localhost:8080/api/health
+
+# Check current version
+curl http://localhost:8080/api/version/current
+
+# Check for updates
+curl http://localhost:8080/api/version/check
+
+# System status
+curl http://localhost:8080/api/system/status
+```
+
+### Troubleshooting
+
+If the web manager doesn't start:
+
+```bash
+# Check container status
+docker ps -a | grep n-guard-manager
+
+# View logs
+docker logs n-guard-manager
+
+# Rebuild if needed
+docker compose build --no-cache web-manager
+docker compose up -d web-manager
+```
+
+For detailed web manager documentation, see [UPDATE-MANAGEMENT.md](UPDATE-MANAGEMENT.md).
