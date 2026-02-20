@@ -68,21 +68,30 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=8080
+      - HTTPS_PORT=8443
+      - HTTPS_ENABLED=true
+      - CERT_DIR=/app/certs
+      - CERT_HOSTNAME=${PUBLIC_IP_OR_DDNS:-nguardvpn.local}
       - GITHUB_REPO=nyonnguyen/n-guard-vpn
       - VERSION_FILE=/app/VERSION
       - TZ=Asia/Ho_Chi_Minh
       - AUTO_CHECK_UPDATES=true
       - CREATE_BACKUP_BEFORE_UPDATE=true
       - LOG_LEVEL=info
+      - VPN_ACCESS_PASSWORD=${VPN_ACCESS_PASSWORD:-nguard-vpn-access}
+      - WIREGUARD_CONFIG_PATH=/opt/n-guard-vpn/wireguard/config
     volumes:
       - ./VERSION:/app/VERSION:ro
       - ./backups:/app/backups
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./web-manager/logs:/app/logs
+      - ./web-manager/certs:/app/certs
       - ./.env:/app/.env:ro
       - ./scripts:/opt/n-guard-vpn/scripts:ro
+      - ./wireguard/config:/opt/n-guard-vpn/wireguard/config:ro
     ports:
       - "8080:8080"
+      - "8443:8443"
     restart: unless-stopped
     networks:
       vpn_network:

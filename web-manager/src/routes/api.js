@@ -4,7 +4,9 @@ const router = express.Router();
 const versionController = require('../controllers/versionController');
 const updateController = require('../controllers/updateController');
 const systemController = require('../controllers/systemController');
+const vpnController = require('../controllers/vpnController');
 const { updateLimiter, apiLimiter } = require('../middleware/rateLimiter');
+const { login, logout, checkAuthStatus, requireVpnAuth } = require('../middleware/vpnAuth');
 
 // Apply general API rate limiting
 router.use(apiLimiter);
@@ -30,5 +32,24 @@ router.get('/system/logs/:container', systemController.getLogs);
 
 // About endpoint
 router.get('/about', systemController.getAbout);
+
+// VPN Authentication endpoints
+router.post('/vpn/auth/login', login);
+router.post('/vpn/auth/logout', logout);
+router.get('/vpn/auth/status', checkAuthStatus);
+
+// VPN endpoints (public - status and list)
+router.get('/vpn/status', vpnController.getStatus.bind(vpnController));
+router.get('/vpn/peers', vpnController.listPeers.bind(vpnController));
+router.get('/vpn/peers/:id', vpnController.getPeer.bind(vpnController));
+
+// VPN endpoints (protected - requires auth for sensitive data)
+router.get('/vpn/peers/:id/qr', requireVpnAuth, vpnController.getQRCode.bind(vpnController));
+router.get('/vpn/peers/:id/config', requireVpnAuth, vpnController.downloadConfig.bind(vpnController));
+router.get('/vpn/peers/:id/config-content', requireVpnAuth, vpnController.getConfigContent.bind(vpnController));
+
+// VPN management endpoints (protected)
+router.post('/vpn/peers', requireVpnAuth, vpnController.createPeer.bind(vpnController));
+router.delete('/vpn/peers/:id', requireVpnAuth, vpnController.deletePeer.bind(vpnController));
 
 module.exports = router;

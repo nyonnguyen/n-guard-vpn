@@ -3,6 +3,8 @@ const path = require('path');
 module.exports = {
   // Server configuration
   port: process.env.PORT || 8080,
+  httpsPort: process.env.HTTPS_PORT || 8443,
+  httpsEnabled: process.env.HTTPS_ENABLED !== 'false',
   nodeEnv: process.env.NODE_ENV || 'production',
 
   // GitHub configuration
@@ -17,7 +19,15 @@ module.exports = {
     backupDir: '/app/backups',
     tempDir: '/tmp',
     scriptsDir: '/opt/n-guard-vpn/scripts',
-    projectRoot: '/opt/n-guard-vpn'
+    projectRoot: '/opt/n-guard-vpn',
+    certsDir: '/app/certs',
+    wireguardConfig: '/opt/n-guard-vpn/wireguard/config'
+  },
+
+  // WireGuard/VPN configuration
+  wireguard: {
+    containerName: 'n-guard-wireguard',
+    configPath: process.env.WIREGUARD_CONFIG_PATH || '/opt/n-guard-vpn/wireguard/config'
   },
 
   // Update configuration

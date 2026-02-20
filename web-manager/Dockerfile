@@ -1,7 +1,7 @@
 FROM node:20-alpine
 
-# Install required system packages
-RUN apk add --no-cache docker-cli bash curl wget tar
+# Install required system packages including openssl for HTTPS
+RUN apk add --no-cache docker-cli bash curl wget tar openssl
 
 WORKDIR /app
 
@@ -14,14 +14,16 @@ RUN npm install --omit=dev
 # Copy application code
 COPY . .
 
-# Use existing node user and ensure proper permissions
-RUN chown -R node:node /app && \
-    mkdir -p /app/logs && \
-    chown -R node:node /app/logs
+# Create directories and set permissions
+RUN mkdir -p /app/logs /app/certs && \
+    chown -R node:node /app
+
+# Copy certificate generation script
+COPY --chmod=755 scripts/generate-certs.sh /app/scripts/
 
 USER node
 
-EXPOSE 8080
+EXPOSE 8080 8443
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

@@ -93,6 +93,8 @@ coverage/
 *.crt
 *.cert
 *.cer
+web-manager/certs/*
+!web-manager/certs/.gitkeep
 
 # SSH keys (just in case)
 *.pem

@@ -1,6 +1,6 @@
 # Version Management Workflow
 
-This document explains the complete version management workflow for N-Guard VPN.
+This document explains the complete version management workflow for the Nyon Livestream Server.
 
 ## Overview
 
@@ -23,7 +23,7 @@ When you merge a PR to `main`, GitHub Actions automatically:
 4. ✅ Creates a git commit
 5. ✅ Creates a git tag (e.g., `v1.0.1`)
 6. ✅ Publishes a GitHub Release with release notes
-7. ✅ Builds and attaches release artifacts (configs, docs, full source)
+7. ✅ Triggers Docker image build and publish
 
 ### Branch Naming Convention
 
@@ -37,9 +37,9 @@ Name your branches to indicate the version bump type:
 
 **Examples:**
 ```bash
-git checkout -b nyon/fix-wireguard-config    # Will bump PATCH
-git checkout -b nyon/feature-ipv6-support    # Will bump MINOR
-git checkout -b nyon/breaking-docker-compose # Will bump MAJOR
+git checkout -b nyon/fix-session-ghost      # Will bump PATCH
+git checkout -b nyon/feature-webrtc         # Will bump MINOR
+git checkout -b nyon/breaking-auth-rewrite  # Will bump MAJOR
 ```
 
 ### PR Title Detection (Fallback)
@@ -52,27 +52,27 @@ If the branch name doesn't match the pattern, the workflow checks the PR title:
 
 **Examples:**
 ```
-fix: resolve DNS leak in iptables rules     → PATCH
-feat: add IPv6 support for WireGuard        → MINOR
-BREAKING: migrate to Docker Compose v3      → MAJOR
+fix: resolve ghost session bug              → PATCH
+feat: add dark mode support                 → MINOR
+BREAKING: change API authentication         → MAJOR
 ```
 
 ### Workflow Steps
 
 1. **Create a feature branch:**
    ```bash
-   git checkout -b nyon/fix-adguard-config
+   git checkout -b nyon/fix-settings-save
    ```
 
 2. **Make your changes and commit:**
    ```bash
    git add .
-   git commit -m "Fix AdGuard Home configuration"
+   git commit -m "Fix settings page save functionality"
    ```
 
 3. **Push to GitHub:**
    ```bash
-   git push origin nyon/fix-adguard-config
+   git push origin nyon/fix-settings-save
    ```
 
 4. **Create a Pull Request:**
@@ -90,14 +90,15 @@ BREAKING: migrate to Docker Compose v3      → MAJOR
    - CHANGELOG.md is updated
    - Git tag `v1.0.1` is created
    - GitHub Release is published
-   - Release artifacts are built and attached (configs, docs, full source)
+   - Docker images are built and published
+   - Users can now see the update in the web UI
 
 ### Checking the Release
 
 After merging, check:
 - GitHub Actions tab for workflow status
 - Releases page for the new release
-- Download and verify release artifacts (configs, docs, full source)
+- Docker images: `ghcr.io/nyonnguyen/livestream-server/web-api:latest`
 
 ---
 
@@ -137,9 +138,9 @@ Use the `bump-version.sh` script when:
 
 ```bash
 # 1. Make your changes
-git checkout -b nyon/fix-healthcheck-timeout
+git checkout -b nyon/fix-api-timeout
 # ... make changes ...
-git commit -m "Fix healthcheck script timeout issue"
+git commit -m "Fix API timeout issue"
 
 # 2. Bump version
 ./scripts/bump-version.sh auto
@@ -147,7 +148,7 @@ git commit -m "Fix healthcheck script timeout issue"
 # Confirm? (y/N): y
 
 # 3. Push everything
-git push origin nyon/fix-healthcheck-timeout
+git push origin nyon/fix-api-timeout
 git push origin v1.0.1
 
 # 4. Manually create GitHub Release
@@ -165,18 +166,18 @@ git push origin v1.0.1
 
 | Pattern | Type | Example |
 |---------|------|---------|
-| `breaking`, `major` | MAJOR | `nyon/breaking-docker-compose-v3` |
-| `feature`, `feat` | MINOR | `nyon/feature-ipv6-support` |
-| `fix` | PATCH | `nyon/fix-dns-leak` |
+| `breaking`, `major` | MAJOR | `nyon/breaking-api-change` |
+| `feature`, `feat` | MINOR | `nyon/feature-notifications` |
+| `fix` | PATCH | `nyon/fix-memory-leak` |
 | Default | PATCH | `nyon/update-docs` |
 
 ### From Commit Messages
 
 | Prefix | Type | Example |
 |--------|------|---------|
-| `BREAKING:`, `break:` | MAJOR | `BREAKING: remove Squid proxy support` |
-| `feat:`, `feature:`, `add:` | MINOR | `feat: add IPv6 WireGuard support` |
-| `fix:` | PATCH | `fix: resolve iptables DNS leak` |
+| `BREAKING:`, `break:` | MAJOR | `BREAKING: remove deprecated API` |
+| `feat:`, `feature:`, `add:` | MINOR | `feat: add user profiles` |
+| `fix:` | PATCH | `fix: resolve login bug` |
 | Default | PATCH | `update README` |
 
 ---
@@ -195,14 +196,13 @@ The workflow automatically updates CHANGELOG.md with:
 Update `CHANGELOG.md` manually:
 
 ```markdown
-## [1.0.1] - 2026-02-20
+## [1.0.1] - 2026-02-16
 
 ### Fixed
-- AdGuard Home configuration not persisting after restart
-- WireGuard clients unable to connect after DNS changes
-- DNS leak in iptables rules when VPN drops
+- Settings page unable to save due to missing config entries
+- Ghost sessions showing as live after publisher stops
 
-[1.0.1]: https://github.com/nyonnguyen/n-guard-vpn/compare/v1.0.0...v1.0.1
+[1.0.1]: https://github.com/nyonnguyen/livestream-server/compare/v1.0.0...v1.0.1
 ```
 
 ### Categories
@@ -244,7 +244,7 @@ Use these categories:
 | Version bump | ✅ Automatic | ⚠️ Manual |
 | CHANGELOG update | ✅ Automatic | ⚠️ Manual |
 | GitHub Release | ✅ Automatic | ⚠️ Manual |
-| Release artifacts | ✅ Automatic | ⚠️ Manual |
+| Docker build | ✅ Automatic | ⚠️ Manual |
 | Release notes | ✅ From PR | ⚠️ Manual |
 | Consistency | ✅ Always | ⚠️ Depends |
 | **Recommended for** | Team workflow | Solo/hotfix |
@@ -331,162 +331,18 @@ Then create GitHub Release manually.
 
 ### Q: How do users get notified of updates?
 
-**A:** Users can check for updates:
-- Monitor the GitHub Releases page: https://github.com/nyonnguyen/n-guard-vpn/releases
-- Subscribe to release notifications on GitHub (Watch → Custom → Releases)
-- Check the version with: `cat VERSION`
-- Compare with latest release tag: `git fetch --tags && git tag -l | tail -1`
-
----
-
-## N-Guard VPN Specific Notes
-
-### What Gets Versioned
-
-N-Guard VPN versions track changes to:
-- **Configuration files:** docker-compose.yml, .env.template, service configs
-- **Automation scripts:** setup.sh, backup.sh, healthcheck.sh, update-blocklists.sh
-- **Firewall rules:** iptables-rules.sh
-- **Documentation:** All .md files (INSTALL.md, CLIENT-SETUP.md, etc.)
-- **Project structure:** Directory layout, Docker Compose services
-
-### What Doesn't Get Versioned
-
-These are not part of version control:
-- **Docker images:** Uses public images from Docker Hub/GHCR (linuxserver/wireguard, adguard/adguardhome, etc.)
-- **Generated VPN configs:** wireguard/config/* (user-specific)
-- **Runtime data:** AdGuard database, DNS cache, logs
-- **User secrets:** .env file with passwords and keys
-
-### Release Artifacts
-
-Each release includes three downloadable artifacts:
-
-1. **n-guard-vpn-vX.Y.Z.tar.gz** - Complete source code
-   - Everything needed for new installation
-   - Includes all configs, scripts, and documentation
-   - Extract and run `./scripts/setup.sh` to install
-
-2. **n-guard-vpn-configs-vX.Y.Z.tar.gz** - Configuration files only
-   - For updating existing installations
-   - Includes docker-compose.yml, scripts, service configs
-   - Compare with your current setup before applying
-
-3. **n-guard-vpn-docs-vX.Y.Z.tar.gz** - Documentation bundle
-   - All documentation files
-   - Useful for offline reference
-   - Includes INSTALL.md, CLIENT-SETUP.md, TROUBLESHOOTING.md
-
-4. **checksums.txt** - SHA256 checksums for verification
-   - Verify downloads: `sha256sum -c checksums.txt`
-
-### Upgrading N-Guard VPN
-
-To upgrade to a new version:
-
-**1. Backup your configuration:**
-```bash
-./scripts/backup.sh
-```
-
-**2. Download new version:**
-```bash
-# Full source (recommended for major versions)
-wget https://github.com/nyonnguyen/n-guard-vpn/releases/download/vX.Y.Z/n-guard-vpn-vX.Y.Z.tar.gz
-tar -xzf n-guard-vpn-vX.Y.Z.tar.gz
-
-# OR configs only (for minor/patch updates)
-wget https://github.com/nyonnguyen/n-guard-vpn/releases/download/vX.Y.Z/n-guard-vpn-configs-vX.Y.Z.tar.gz
-tar -xzf n-guard-vpn-configs-vX.Y.Z.tar.gz
-```
-
-**3. Review changes:**
-```bash
-# Check CHANGELOG for breaking changes
-cat CHANGELOG.md
-
-# Compare configurations
-diff docker-compose.yml n-guard-vpn-configs-X.Y.Z/docker-compose.yml
-diff .env.template n-guard-vpn-configs-X.Y.Z/.env.template
-```
-
-**4. Update scripts and configs:**
-```bash
-# Copy updated scripts
-cp n-guard-vpn-configs-X.Y.Z/scripts/*.sh scripts/
-chmod +x scripts/*.sh
-
-# Merge config changes if needed
-# Review and manually update your .env file if .env.template changed
-```
-
-**5. Pull latest Docker images:**
-```bash
-docker-compose pull
-```
-
-**6. Restart services:**
-```bash
-docker-compose down
-docker-compose up -d
-```
-
-**7. Verify everything works:**
-```bash
-./scripts/healthcheck.sh
-```
-
-### Version Bump Guidelines for N-Guard VPN
-
-**MAJOR version (X.0.0):**
-- Breaking changes requiring manual migration
-- Changes to docker-compose.yml structure
-- New required environment variables in .env
-- Removal of services or features
-- Changes requiring client reconfiguration
-
-**Examples:**
-- Migrating from Docker Compose v2 to v3
-- Removing Squid proxy (MITM feature)
-- Changing WireGuard config format
-- Switching from AdGuard to Pi-hole
-
-**MINOR version (X.Y.0):**
-- New features (backward compatible)
-- New optional services
-- New automation scripts
-- Performance improvements
-- New documentation
-
-**Examples:**
-- Adding IPv6 support
-- Adding new blocklists
-- Adding Redis caching layer
-- Adding web-based admin panel
-- Improving AdGuard config
-
-**PATCH version (X.Y.Z):**
-- Bug fixes
-- Script improvements
-- Documentation updates
-- Configuration tweaks
-- Security updates
-
-**Examples:**
-- Fixing DNS leak in iptables
-- Fixing healthcheck timeout
-- Updating blocklist URLs
-- Correcting documentation typos
-- Updating dependency versions
+**A:** The web UI checks for updates:
+- Automatically every 6 hours
+- Manually via "Check for Updates" button (About page)
+- Shows notification banner when update available
 
 ---
 
 ## Related Documentation
 
+- [VERSION-MANAGEMENT.md](VERSION-MANAGEMENT.md) - Technical details
 - [CHANGELOG.md](../CHANGELOG.md) - Version history
-- [INSTALL.md](INSTALL.md) - Installation guide
-- [CLIENT-SETUP.md](CLIENT-SETUP.md) - Client configuration
-- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Troubleshooting guide
+- [CI-CD.md](CI-CD.md) - CI/CD pipeline overview
 
 ---
 
