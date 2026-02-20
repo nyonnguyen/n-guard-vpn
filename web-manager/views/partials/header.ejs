@@ -1,0 +1,17 @@
+<header class="bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg">
+  <div class="container mx-auto px-4 py-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+        </svg>
+        <h1 class="text-2xl font-bold">N-Guard VPN</h1>
+      </div>
+      <nav class="flex space-x-4">
+        <a href="/about" class="hover:text-blue-200 transition-colors px-3 py-2 rounded <%= title && title.includes('About') ? 'bg-blue-700' : '' %>">About</a>
+        <a href="/update" class="hover:text-blue-200 transition-colors px-3 py-2 rounded <%= title && title.includes('Update') ? 'bg-blue-700' : '' %>">Update</a>
+        <a href="/status" class="hover:text-blue-200 transition-colors px-3 py-2 rounded <%= title && title.includes('Status') ? 'bg-blue-700' : '' %>">Status</a>
+      </nav>
+    </div>
+  </div>
+</header>

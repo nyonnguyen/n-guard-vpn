@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      padding-bottom: 70px;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <%- include('partials/header') %>
+
+  <div class="container mx-auto px-4 py-8 max-w-4xl">
+    <!-- Page Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-800 mb-2">Update Manager</h1>
+      <p class="text-gray-600">Manage N-Guard VPN updates and view system status</p>
+    </div>
+
+    <!-- Current Version Card -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4 flex items-center">
+        <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        Current Version
+      </h2>
+      <div class="flex justify-between items-center">
+        <div>
+          <p class="text-3xl font-bold text-blue-600" id="currentVersionDisplay"><%= version %></p>
+          <p class="text-sm text-gray-500 mt-1">Installed version</p>
+        </div>
+        <button onclick="checkForUpdates()" id="checkUpdateBtn"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors shadow-md">
+          Check for Updates
+        </button>
+      </div>
+    </div>
+
+    <!-- Update Status Card -->
+    <div id="updateStatusCard" class="hidden bg-white rounded-lg shadow-md p-6 mb-6">
+      <div id="updateStatusContent"></div>
+    </div>
+
+    <!-- Progress Card (hidden by default) -->
+    <div id="progressCard" class="hidden bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Update Progress</h2>
+      <div class="mb-4">
+        <div class="flex justify-between mb-2">
+          <span id="progressState" class="text-sm font-medium text-gray-700">Initializing...</span>
+          <span id="progressPercent" class="text-sm font-medium text-gray-700">0%</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-4">
+          <div id="progressBar" class="bg-blue-600 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+      </div>
+      <div class="mt-4">
+        <p id="progressMessage" class="text-sm text-gray-600 mb-2">Please wait...</p>
+        <details class="mt-2">
+          <summary class="cursor-pointer text-sm text-blue-600 hover:text-blue-800">View Logs</summary>
+          <div id="progressLogs" class="mt-2 bg-gray-900 text-green-400 p-3 rounded text-xs font-mono max-h-60 overflow-auto">
+            Waiting for logs...
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <!-- System Status -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-semibold mb-4 flex items-center">
+        <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        System Status
+      </h2>
+      <div id="systemStatus" class="space-y-2">
+        <div class="flex items-center justify-between py-2 border-b">
+          <span class="text-gray-700">Loading system status...</span>
+          <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+      <div class="mt-4">
+        <a href="/status" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+          View detailed status →
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <%- include('partials/footer') %>
+
+  <script src="/static/js/update-checker.js"></script>
+  <script>
+    // Load system status on page load
+    async function loadSystemStatus() {
+      try {
+        const response = await fetch('/api/system/status');
+        const data = await response.json();
+
+        const statusHtml = `
+          <div class="flex items-center justify-between py-2 border-b">
+            <span class="text-gray-700">Containers</span>
+            <span class="font-medium ${data.containers.healthy ? 'text-green-600' : 'text-red-600'}">
+              ${data.containers.healthy ? '✓ All Healthy' : '✗ Issues Detected'}
+            </span>
+          </div>
+          <div class="flex items-center justify-between py-2 border-b">
+            <span class="text-gray-700">Disk Space</span>
+            <span class="font-medium text-gray-800">${data.system.free_disk_space} free</span>
+          </div>
+          <div class="flex items-center justify-between py-2">
+            <span class="text-gray-700">Backups</span>
+            <span class="font-medium text-gray-800">${data.backups.count} available (${data.backups.total_size})</span>
+          </div>
+        `;
+
+        document.getElementById('systemStatus').innerHTML = statusHtml;
+      } catch (error) {
+        document.getElementById('systemStatus').innerHTML = `
+          <div class="text-red-600 text-sm">Failed to load system status</div>
+        `;
+      }
+    }
+
+    loadSystemStatus();
+    // Refresh every 30 seconds
+    setInterval(loadSystemStatus, 30000);
+  </script>
+</body>
+</html>

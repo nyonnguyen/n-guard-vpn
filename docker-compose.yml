@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   wireguard:
     image: linuxserver/wireguard:latest
@@ -63,6 +61,42 @@ services:
     networks:
       vpn_network:
         ipv4_address: 10.13.13.2
+
+  web-manager:
+    build: ./web-manager
+    container_name: n-guard-manager
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - GITHUB_REPO=nyonnguyen/n-guard-vpn
+      - VERSION_FILE=/app/VERSION
+      - TZ=Asia/Ho_Chi_Minh
+      - AUTO_CHECK_UPDATES=true
+      - CREATE_BACKUP_BEFORE_UPDATE=true
+      - LOG_LEVEL=info
+    volumes:
+      - ./VERSION:/app/VERSION:ro
+      - ./backups:/app/backups
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./web-manager/logs:/app/logs
+      - ./.env:/app/.env:ro
+      - ./scripts:/opt/n-guard-vpn/scripts:ro
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      vpn_network:
+        ipv4_address: 10.13.13.5
+    depends_on:
+      - adguard
+      - wireguard
+      - unbound
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   # Optional: HTTPS interception for YouTube ads (Phase 3)
   # Uncomment to enable Squid proxy with SSL bumping

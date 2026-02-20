@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      padding-bottom: 70px; /* Space for fixed footer */
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <%- include('partials/header') %>
+
+  <div class="container mx-auto px-4 py-8 max-w-4xl">
+    <!-- Hero Section -->
+    <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-lg shadow-xl p-8 mb-8">
+      <h1 class="text-4xl font-bold mb-3">N-Guard VPN</h1>
+      <p class="text-xl text-blue-100 mb-2">Complete Ad-Blocking VPN Solution for Raspberry Pi</p>
+      <span class="inline-block bg-yellow-500 text-yellow-900 px-3 py-1 rounded-full text-sm font-semibold">Beta</span>
+    </div>
+
+    <!-- Version Info -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-2xl font-semibold mb-4 flex items-center">
+        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        </svg>
+        Version Information
+      </h2>
+      <div class="space-y-2 mb-6">
+        <div class="flex justify-between items-center py-2 border-b">
+          <span class="font-medium text-gray-700">Current Version:</span>
+          <span class="text-lg font-semibold text-blue-600" id="currentVersion"><%= version %></span>
+        </div>
+        <div class="flex justify-between items-center py-2 border-b">
+          <span class="font-medium text-gray-700">Status:</span>
+          <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold">Beta</span>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-3">
+        <button onclick="checkForUpdates()" id="checkUpdateBtn"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors shadow-md">
+          Check for Updates
+        </button>
+        <a href="/update" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors shadow-md inline-block">
+          Update Manager
+        </a>
+      </div>
+
+      <div id="updateStatus" class="mt-4 hidden"></div>
+    </div>
+
+    <!-- Components -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-2xl font-semibold mb-4 flex items-center">
+        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+        </svg>
+        Components
+      </h2>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="border rounded-lg p-4 hover:shadow-lg transition-shadow">
+          <h3 class="font-bold text-lg mb-2 text-blue-600">WireGuard</h3>
+          <p class="text-gray-600 text-sm">Fast and modern VPN protocol</p>
+        </div>
+        <div class="border rounded-lg p-4 hover:shadow-lg transition-shadow">
+          <h3 class="font-bold text-lg mb-2 text-green-600">AdGuard Home</h3>
+          <p class="text-gray-600 text-sm">Network-wide ad blocking</p>
+        </div>
+        <div class="border rounded-lg p-4 hover:shadow-lg transition-shadow">
+          <h3 class="font-bold text-lg mb-2 text-purple-600">Unbound</h3>
+          <p class="text-gray-600 text-sm">Secure DNS resolver</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Author -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-2xl font-semibold mb-4 flex items-center">
+        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+        </svg>
+        Author
+      </h2>
+      <div class="space-y-2">
+        <p><span class="font-medium text-gray-700">Name:</span> Nyon Nguyen</p>
+        <p><span class="font-medium text-gray-700">GitHub:</span> <a href="https://github.com/nyonnguyen" target="_blank" class="text-blue-600 hover:underline">@nyonnguyen</a></p>
+      </div>
+    </div>
+
+    <!-- Support -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-2xl font-semibold mb-4 flex items-center">
+        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+        </svg>
+        Support This Project
+      </h2>
+      <p class="text-gray-600 mb-4">If N-Guard VPN helps you, please consider supporting development:</p>
+      <div class="flex flex-wrap gap-3">
+        <a href="https://github.com/<%= repo %>" target="_blank"
+           class="bg-gray-800 hover:bg-gray-900 text-white py-2 px-4 rounded-lg transition-colors inline-flex items-center">
+          <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+            <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"></path>
+          </svg>
+          Star on GitHub
+        </a>
+        <a href="https://ko-fi.com/nyonnguyen" target="_blank"
+           class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg transition-colors inline-flex items-center">
+          <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z"/>
+          </svg>
+          Buy me a coffee
+        </a>
+      </div>
+    </div>
+
+    <!-- License -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-2xl font-semibold mb-4 flex items-center">
+        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        </svg>
+        License & Source
+      </h2>
+      <div class="space-y-2">
+        <p><span class="font-medium text-gray-700">License:</span> MIT License</p>
+        <p><span class="font-medium text-gray-700">GitHub:</span> <a href="https://github.com/<%= repo %>" target="_blank" class="text-blue-600 hover:underline">github.com/<%= repo %></a></p>
+        <p><span class="font-medium text-gray-700">Documentation:</span> <a href="https://github.com/<%= repo %>/tree/main/docs" target="_blank" class="text-blue-600 hover:underline">Full docs available</a></p>
+      </div>
+    </div>
+  </div>
+
+  <%- include('partials/footer') %>
+
+  <script src="/static/js/update-checker.js"></script>
+</body>
+</html>

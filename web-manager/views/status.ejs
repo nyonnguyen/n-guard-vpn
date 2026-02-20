@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      padding-bottom: 70px;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <%- include('partials/header') %>
+
+  <div class="container mx-auto px-4 py-8 max-w-6xl">
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-800 mb-2">System Status</h1>
+      <p class="text-gray-600">Real-time monitoring of N-Guard VPN components</p>
+    </div>
+
+    <!-- Containers Status -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4 flex items-center">
+        <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+        </svg>
+        Containers
+      </h2>
+      <div id="containersStatus">
+        <div class="text-center py-4">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p class="text-gray-500 mt-2">Loading...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Resources -->
+    <div class="grid md:grid-cols-2 gap-6 mb-6">
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4 flex items-center">
+          <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>
+          </svg>
+          System Resources
+        </h2>
+        <div id="systemResources">
+          <div class="text-center py-4">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4 flex items-center">
+          <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path>
+          </svg>
+          Backups
+        </h2>
+        <div id="backupsInfo">
+          <div class="text-center py-4">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-semibold mb-4">Quick Actions</h2>
+      <div class="flex flex-wrap gap-3">
+        <a href="/update" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
+          Check for Updates
+        </a>
+        <button onclick="refreshStatus()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors">
+          Refresh Status
+        </button>
+        <a href="/about" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors">
+          About N-Guard
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <%- include('partials/footer') %>
+
+  <script>
+    async function loadStatus() {
+      try {
+        const response = await fetch('/api/system/status');
+        const data = await response.json();
+
+        // Update containers
+        const containersHtml = `
+          <div class="grid gap-3">
+            ${data.containers.details.map(container => `
+              <div class="flex items-center justify-between p-3 border rounded-lg ${container.running ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}">
+                <div>
+                  <p class="font-medium">${container.name}</p>
+                  <p class="text-sm text-gray-600">${container.health}</p>
+                </div>
+                <span class="text-2xl">${container.running ? '✓' : '✗'}</span>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        document.getElementById('containersStatus').innerHTML = containersHtml;
+
+        // Update system resources
+        const resourcesHtml = `
+          <div class="space-y-3">
+            <div class="flex justify-between items-center p-3 border-b">
+              <span class="text-gray-700">Free Disk Space</span>
+              <span class="font-semibold">${data.system.free_disk_space}</span>
+            </div>
+            <div class="flex justify-between items-center p-3">
+              <span class="text-gray-700">Version</span>
+              <span class="font-semibold">${data.version}</span>
+            </div>
+          </div>
+        `;
+        document.getElementById('systemResources').innerHTML = resourcesHtml;
+
+        // Update backups
+        const backupsHtml = `
+          <div class="space-y-3">
+            <div class="flex justify-between items-center p-3 border-b">
+              <span class="text-gray-700">Total Backups</span>
+              <span class="font-semibold">${data.backups.count}</span>
+            </div>
+            <div class="flex justify-between items-center p-3 border-b">
+              <span class="text-gray-700">Total Size</span>
+              <span class="font-semibold">${data.backups.total_size}</span>
+            </div>
+            <div class="flex justify-between items-center p-3">
+              <span class="text-gray-700">Latest</span>
+              <span class="font-semibold text-sm">${data.backups.latest || 'None'}</span>
+            </div>
+          </div>
+        `;
+        document.getElementById('backupsInfo').innerHTML = backupsHtml;
+
+      } catch (error) {
+        console.error('Failed to load status:', error);
+        ['containersStatus', 'systemResources', 'backupsInfo'].forEach(id => {
+          document.getElementById(id).innerHTML = `
+            <div class="text-red-600 text-sm p-3">Failed to load data</div>
+          `;
+        });
+      }
+    }
+
+    function refreshStatus() {
+      loadStatus();
+    }
+
+    // Load on page load
+    loadStatus();
+
+    // Auto-refresh every 10 seconds
+    setInterval(loadStatus, 10000);
+  </script>
+</body>
+</html>
