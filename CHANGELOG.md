@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+
+## [0.4.1] - 2026-02-21
+
+### Changed
+- fix: resolve v0.4.0 UI bugs (7 issues) (#6)
+
 ## [0.4.0] - 2026-02-20
 
 ### Changed
@@ -95,3 +101,4 @@ This is the first beta release of N-Guard VPN. The system is functional but not 
 [0.2.1]: https://github.com/nyonnguyen/n-guard-vpn/compare/v0.2.0...v0.2.1
 [0.3.0]: https://github.com/nyonnguyen/n-guard-vpn/compare/v0.2.1...v0.3.0
 [0.4.0]: https://github.com/nyonnguyen/n-guard-vpn/compare/v0.3.0...v0.4.0
+[0.4.1]: https://github.com/nyonnguyen/n-guard-vpn/compare/v0.4.0...v0.4.1
