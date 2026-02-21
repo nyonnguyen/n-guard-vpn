@@ -19,6 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
       vpnLogin();
     }
   });
+
+  // Show iOS instructions by default
+  showInstructions('ios');
 });
 
 /**
@@ -26,11 +29,22 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 async function checkAuthStatus() {
   try {
-    const response = await fetch('/api/vpn/auth/status');
+    // Check localStorage for existing token
+    const storedToken = localStorage.getItem('vpn_token');
+    if (!storedToken) {
+      return; // No token stored, user needs to login
+    }
+
+    // Verify token with server
+    const response = await fetch(`/api/vpn/auth/status?token=${encodeURIComponent(storedToken)}`);
     const data = await response.json();
 
     if (data.authenticated) {
+      authToken = storedToken;
       onAuthSuccess();
+    } else {
+      // Token invalid/expired, clear it
+      localStorage.removeItem('vpn_token');
     }
   } catch (error) {
     console.error('Auth check failed:', error);
@@ -132,7 +146,17 @@ async function loadServerStatus() {
     }
 
     if (data.server) {
-      serverEndpoint.textContent = data.server.endpoint || '-';
+      const endpoint = data.server.endpoint || '-';
+      serverEndpoint.textContent = endpoint;
+
+      // Warn if endpoint is localhost (misconfigured)
+      if (endpoint.includes('localhost') || endpoint.includes('127.0.0.1')) {
+        serverEndpoint.classList.add('text-yellow-600');
+        serverEndpoint.title = 'Warning: Endpoint not configured. Set PUBLIC_IP_OR_DDNS in .env';
+      } else {
+        serverEndpoint.classList.remove('text-yellow-600');
+        serverEndpoint.title = '';
+      }
     }
 
     if (data.peers) {
