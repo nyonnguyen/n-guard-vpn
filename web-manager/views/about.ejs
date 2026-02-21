@@ -52,6 +52,27 @@
       </div>
 
       <div id="updateStatus" class="mt-4 hidden"></div>
+
+      <!-- Update Status Card (required by update-checker.js) -->
+      <div id="updateStatusCard" class="hidden mt-4">
+        <div id="updateStatusContent"></div>
+      </div>
+
+      <!-- Progress Card (required for update installation) -->
+      <div id="progressCard" class="hidden mt-4 bg-white rounded-lg shadow-md p-6">
+        <h3 class="text-xl font-semibold mb-4">Update Progress</h3>
+        <div class="mb-4">
+          <div class="flex justify-between mb-2">
+            <span id="progressState" class="text-sm font-medium text-gray-700">Initializing...</span>
+            <span id="progressPercent" class="text-sm font-medium text-gray-700">0%</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-4">
+            <div id="progressBar" class="bg-blue-600 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
+          </div>
+        </div>
+        <p id="progressMessage" class="text-gray-600 text-sm mb-4"></p>
+        <pre id="progressLogs" class="bg-gray-100 p-3 rounded text-xs max-h-40 overflow-y-auto hidden"></pre>
+      </div>
     </div>
 
     <!-- Components -->
