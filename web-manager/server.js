@@ -24,7 +24,8 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "cdn.tailwindcss.com"],
-      scriptSrc: ["'self'", "cdn.tailwindcss.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "cdn.tailwindcss.com"],
+      scriptSrcAttr: ["'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "blob:"]
     }
   }
